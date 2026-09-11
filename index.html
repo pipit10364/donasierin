@@ -209,16 +209,27 @@
 
 <!-- ===== Modal: Sumbang ===== -->
 <div class="overlay" id="donate-overlay">
-  <div class="modal">
+  <div class="modal" style="max-width:440px;">
     <button class="modal-close" onclick="closeModal('donate-overlay')">✕</button>
     <h3 id="donate-title">Sumbang</h3>
     <p class="sub" id="donate-sub"></p>
     <label>Transfer / QRIS</label>
-    <div style="background:var(--bg-tile);border:1px solid var(--border-soft);border-radius:4px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink-dim);">
-      QRIS &amp; nomor rekening menyusul di sini — admin bisa isi lewat mode edit. Setelah transfer, konfirmasi ke admin ya, nanti progresnya diupdate manual dulu (sistem otomatis nyusul).
+    <div id="transfer-info-box" style="background:var(--bg-tile);border:1px solid var(--border-soft);border-radius:4px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink-dim);white-space:pre-line;">
+      Info rekening/QRIS belum diisi admin.
     </div>
+
+    <label>Nama</label>
+    <input type="text" id="donate-nama" placeholder="Nama kamu">
+    <label>Akun sosmed (buat dihubungi kalau ada kesalahan)</label>
+    <input type="text" id="donate-sosmed" placeholder="@username">
+    <label>Nominal donasi (Rp)</label>
+    <input type="number" id="donate-nominal" min="1" placeholder="50000">
+    <label>Bukti transfer (screenshot/foto)</label>
+    <input type="file" id="donate-bukti" accept="image/*,.pdf">
+
+    <div class="msg" id="donate-msg"></div>
     <div class="modal-actions">
-      <button class="btn btn-primary" style="flex:1" onclick="closeModal('donate-overlay')">Mengerti</button>
+      <button class="btn btn-primary" style="flex:1" id="donate-submit-btn" onclick="submitDonation()">Kirim konfirmasi</button>
     </div>
   </div>
 </div>
@@ -248,7 +259,22 @@
     <p class="sub">Klik kategori buat edit target, harga per unit, atau tambah dana masuk.</p>
     <div class="admin-panel-list" id="admin-list"></div>
     <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="openTransferInfoEdit()">Edit info transfer/QRIS</button>
       <button class="btn btn-ghost btn-sm" onclick="exitAdmin()">Keluar mode admin</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: Edit info transfer ===== -->
+<div class="overlay" id="transfer-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('transfer-overlay')">✕</button>
+    <h3>Info transfer / QRIS</h3>
+    <p class="sub">Teks ini muncul di form Sumbang. Bisa tulis nomor rekening, nama bank, atau catatan soal QRIS.</p>
+    <textarea id="transfer-info-input" rows="5" placeholder="BCA 1234567890 a.n. ..."></textarea>
+    <div class="msg" id="transfer-info-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" style="flex:1" onclick="saveTransferInfo()">Simpan</button>
     </div>
   </div>
 </div>
@@ -296,6 +322,19 @@
   };
   firebase.initializeApp(firebaseConfig);
   const categoriesRef = firebase.database().ref('categories');
+  const transferInfoRef = firebase.database().ref('settings/transferInfo');
+
+  // URL Web App dari Google Apps Script (doPost nulis ke spreadsheet log donasi)
+  const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbzLDBdfmgszRuOQZxubWOBvKqLLlsxZo-miMTFWlCggAukRrPZ0a52zvSFLVnsnGKo/exec';
+
+  let currentDonateCategory = null;
+  let transferInfoText = '';
+
+  transferInfoRef.on('value', (snapshot) => {
+    transferInfoText = snapshot.val() || '';
+    const box = document.getElementById('transfer-info-box');
+    if (box) box.textContent = transferInfoText || 'Info rekening/QRIS belum diisi admin.';
+  });
 
   const DEFAULT_CATEGORIES = [
     { id: 'pohon', name: 'Pohon', unit: 'pohon', desc: 'Penanaman pohon di lahan kritis.', price: 50000, target: 2500000, collected: 0 },
@@ -407,9 +446,108 @@
 
   function openDonate(id){
     const c = categories.find(x => x.id === id);
+    currentDonateCategory = c;
     document.getElementById('donate-title').textContent = `Sumbang untuk ${c.name}`;
     document.getElementById('donate-sub').textContent = `${rupiah(c.price)} = 1 ${c.unit}. Sumbang berapapun tetap dihitung.`;
+    document.getElementById('transfer-info-box').textContent = transferInfoText || 'Info rekening/QRIS belum diisi admin.';
+    document.getElementById('donate-nama').value = '';
+    document.getElementById('donate-sosmed').value = '';
+    document.getElementById('donate-nominal').value = '';
+    document.getElementById('donate-bukti').value = '';
+    document.getElementById('donate-msg').className = 'msg';
+    document.getElementById('donate-msg').textContent = '';
     openModal('donate-overlay');
+  }
+
+  function fileToBase64(file){
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        // reader.result formatnya "data:image/png;base64,AAAA..." — kita cuma butuh bagian setelah koma
+        const base64 = reader.result.split(',')[1];
+        resolve(base64);
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function submitDonation(){
+    const nama = document.getElementById('donate-nama').value.trim();
+    const sosmed = document.getElementById('donate-sosmed').value.trim();
+    const nominal = document.getElementById('donate-nominal').value;
+    const fileInput = document.getElementById('donate-bukti');
+    const file = fileInput.files[0];
+    const msg = document.getElementById('donate-msg');
+    const btn = document.getElementById('donate-submit-btn');
+
+    if (!nama || !sosmed || !nominal || Number(nominal) <= 0 || !file){
+      msg.className = 'msg err';
+      msg.textContent = 'Semua field wajib diisi, termasuk bukti transfer.';
+      return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'Mengirim…';
+    msg.className = 'msg';
+    msg.textContent = '';
+
+    try{
+      const base64 = await fileToBase64(file);
+      const payload = {
+        nama,
+        sosmed,
+        kategori: currentDonateCategory ? currentDonateCategory.name : '',
+        nominal,
+        buktiTf: {
+          base64,
+          mimeType: file.type,
+          fileName: file.name
+        }
+      };
+
+      const res = await fetch(WEBAPP_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // hindari CORS preflight ke Apps Script
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+
+      if (data.result === 'success'){
+        msg.className = 'msg ok';
+        msg.textContent = 'Terkirim! Terima kasih — admin akan cek & update progresnya.';
+        setTimeout(() => closeModal('donate-overlay'), 1800);
+      } else {
+        throw new Error('Respons tidak sesuai');
+      }
+    }catch(e){
+      msg.className = 'msg err';
+      msg.textContent = 'Gagal mengirim, coba lagi ya. (' + e.message + ')';
+    }finally{
+      btn.disabled = false;
+      btn.textContent = 'Kirim konfirmasi';
+    }
+  }
+
+  function openTransferInfoEdit(){
+    document.getElementById('transfer-info-input').value = transferInfoText;
+    document.getElementById('transfer-info-msg').textContent = '';
+    closeModal('admin-overlay');
+    openModal('transfer-overlay');
+  }
+
+  async function saveTransferInfo(){
+    const val = document.getElementById('transfer-info-input').value;
+    const msg = document.getElementById('transfer-info-msg');
+    try{
+      await transferInfoRef.set(val);
+      msg.className = 'msg ok';
+      msg.textContent = 'Tersimpan.';
+      setTimeout(() => closeModal('transfer-overlay'), 700);
+    }catch(e){
+      msg.className = 'msg err';
+      msg.textContent = 'Gagal simpan: ' + e.message;
+    }
   }
 
   function checkPin(){
