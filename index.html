@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dana Konservasi — untuk Erin</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<!-- Firebase (Realtime Database) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
+<style>
+  :root{
+    --bg: #061a15;
+    --bg-panel: #0c2721;
+    --bg-card: #123830;
+    --bg-tile: #0d2a24;
+    --border: #1e4a3f;
+    --border-soft: #17392f;
+    --teal: #2dd4bf;
+    --emerald: #34d399;
+    --cyan: #5eead4;
+    --ink: #eaf6f3;
+    --ink-dim: #83ab9d;
+    --ink-faint: #4c7669;
+    --struck: #e8827a;
+    --gold: #d8b979;
+    --glow: 0 0 40px rgba(45, 212, 191, 0.15);
+  }
+
+  *{ box-sizing:border-box; margin:0; padding:0; }
+
+  body{
+    background:
+      radial-gradient(circle at 15% 10%, rgba(45,212,191,0.08), transparent 45%),
+      radial-gradient(circle at 85% 90%, rgba(94,234,212,0.08), transparent 45%),
+      var(--bg);
+    color: var(--ink);
+    font-family: 'Manrope', sans-serif;
+    line-height: 1.5;
+    min-height: 100vh;
+    padding: 56px 20px 100px;
+  }
+
+  h1, h2, h3, .display{
+    font-family: 'Cormorant Garamond', serif;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
+
+  .wrap{ max-width: 920px; margin: 0 auto; }
+
+  /* ---------- Hero ---------- */
+  .eyebrow{
+    display: inline-flex; align-items: center; gap: 10px;
+    color: var(--gold); font-size: 0.8rem; letter-spacing: 0.1em; margin-bottom: 22px;
+  }
+  .eyebrow::before, .eyebrow::after{
+    content: ""; width: 28px; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--gold));
+  }
+  .eyebrow::after{ background: linear-gradient(90deg, var(--gold), transparent); }
+
+  .hero{ text-align: center; margin-bottom: 40px; }
+  .hero-title{ font-size: clamp(2rem, 5.5vw, 3.1rem); text-shadow: var(--glow); line-height: 1.2; }
+  .hero-sub{ margin-top: 14px; color: var(--teal); font-weight: 600; font-size: 1rem; max-width: 60ch; margin-left: auto; margin-right: auto; }
+
+  .plaque{
+    margin: 32px auto 0; max-width: 640px; text-align: left; background: var(--bg-panel);
+    border: 1px solid var(--border); border-radius: 4px; padding: 26px 26px; position: relative;
+  }
+  .plaque::before, .plaque::after{
+    content: ""; position: absolute; width: 16px; height: 16px;
+    border: 1.5px solid var(--gold); opacity: 0.6;
+  }
+  .plaque::before{ top: 10px; left: 10px; border-right: none; border-bottom: none; }
+  .plaque::after{ bottom: 10px; right: 10px; border-left: none; border-top: none; }
+  .plaque p{ color: var(--ink-dim); font-size: 0.96rem; }
+  .plaque p + p{ margin-top: 10px; }
+  .plaque strong{ color: var(--ink); }
+
+  /* ---------- Overall progress ---------- */
+  .overall{
+    margin-top: 36px; display: flex; align-items: baseline; justify-content: center;
+    gap: 10px; flex-wrap: wrap; font-family: 'JetBrains Mono', monospace;
+  }
+  .overall .big{ font-size: 1.6rem; color: var(--emerald); }
+  .overall .of{ color: var(--ink-faint); font-size: 0.9rem; }
+
+  /* ---------- Category grid ---------- */
+  .grid{
+    margin-top: 44px; display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
+  }
+  @media (max-width: 640px){ .grid{ grid-template-columns: 1fr; } }
+
+  .card{
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px;
+    padding: 24px; position: relative; display: flex; flex-direction: column; gap: 14px;
+  }
+  .card-head{ display: flex; align-items: flex-start; gap: 14px; }
+  .card-icon{
+    flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid var(--border-soft); background: var(--bg-tile);
+    display: flex; align-items: center; justify-content: center;
+  }
+  .card-icon svg{ width: 22px; height: 22px; stroke: var(--teal); fill: none; stroke-width: 1.6; }
+  .card-name{ font-size: 1.35rem; color: var(--ink); }
+  .card-desc{ color: var(--ink-dim); font-size: 0.86rem; margin-top: 3px; line-height: 1.55; }
+
+  .bar-track{
+    height: 8px; border-radius: 20px; background: var(--bg-tile);
+    border: 1px solid var(--border-soft); overflow: hidden;
+  }
+  .bar-fill{
+    height: 100%; border-radius: 20px;
+    background: linear-gradient(90deg, var(--teal), var(--cyan));
+    transition: width 0.4s ease;
+  }
+
+  .amounts{
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-family: 'JetBrains Mono', monospace; font-size: 0.82rem;
+  }
+  .amounts .collected{ color: var(--emerald); font-weight: 700; font-size: 0.92rem; }
+  .amounts .target{ color: var(--ink-faint); }
+
+  .unit-line{
+    font-size: 0.82rem; color: var(--cyan); border-top: 1px solid var(--border-soft);
+    padding-top: 12px; line-height: 1.6;
+  }
+  .unit-line .next-note{ display: block; color: var(--ink-faint); margin-top: 3px; font-size: 0.78rem; }
+
+  .btn{
+    font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 0.92rem;
+    border: none; border-radius: 3px; padding: 12px 20px; cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+  .btn-primary{ background: linear-gradient(120deg, var(--teal), var(--cyan)); color: #04141a; }
+  .btn-primary:hover{ transform: translateY(-2px); box-shadow: 0 8px 24px rgba(45,212,191,0.25); }
+  .btn-ghost{
+    background: transparent; color: var(--teal); border: 1px solid var(--border);
+    font-size: 0.82rem; padding: 9px 16px;
+  }
+  .btn-ghost:hover{ border-color: var(--teal); }
+  .btn-sm{ padding: 9px 14px; font-size: 0.82rem; }
+  .btn-danger{ color: var(--struck); border-color: rgba(232,130,122,0.35); }
+
+  /* ---------- Footer / admin entry ---------- */
+  .footer{ margin-top: 56px; text-align: center; }
+  .footer p{ color: var(--ink-faint); font-size: 0.82rem; margin-bottom: 16px; }
+  .admin-link{
+    background: none; border: none; color: var(--ink-faint); font-size: 0.78rem;
+    cursor: pointer; text-decoration: underline; text-underline-offset: 3px;
+  }
+  .admin-link:hover{ color: var(--teal); }
+  .admin-badge{
+    display: inline-block; margin-bottom: 18px; font-family: 'JetBrains Mono', monospace;
+    font-size: 0.75rem; color: var(--gold); border: 1px solid rgba(216,185,121,0.35);
+    padding: 4px 10px; border-radius: 20px;
+  }
+
+  /* ---------- Overlays / modals ---------- */
+  .overlay{
+    position: fixed; inset: 0; background: rgba(6,17,26,0.82); backdrop-filter: blur(3px);
+    display: none; align-items: center; justify-content: center; padding: 24px; z-index: 60;
+  }
+  .overlay.show{ display: flex; }
+  .modal{
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px;
+    padding: 28px; max-width: 420px; width: 100%; position: relative;
+  }
+  .modal h3{ font-size: 1.4rem; margin-bottom: 6px; }
+  .modal .sub{ color: var(--ink-dim); font-size: 0.86rem; margin-bottom: 20px; }
+  .modal label{ display: block; font-size: 0.78rem; color: var(--ink-faint); margin-bottom: 6px; margin-top: 14px; }
+  .modal label:first-of-type{ margin-top: 0; }
+  .modal input, .modal textarea{
+    width: 100%; background: var(--bg-tile); border: 1px solid var(--border-soft);
+    border-radius: 4px; padding: 10px 12px; color: var(--ink); font-family: 'Manrope', sans-serif;
+    font-size: 0.92rem;
+  }
+  .modal input:focus, .modal textarea:focus{ outline: none; border-color: var(--teal); }
+  .modal-actions{ display: flex; gap: 10px; margin-top: 22px; }
+  .modal-close{
+    position: absolute; top: 18px; right: 18px; background: none; border: none;
+    color: var(--ink-faint); font-size: 1.1rem; cursor: pointer; line-height: 1;
+  }
+  .modal-close:hover{ color: var(--ink); }
+  .msg{ font-size: 0.82rem; margin-top: 12px; min-height: 1.2em; }
+  .msg.err{ color: var(--struck); }
+  .msg.ok{ color: var(--emerald); }
+
+  .admin-panel-list{ display: flex; flex-direction: column; gap: 10px; margin-top: 18px; max-height: 50vh; overflow-y: auto; }
+  .admin-row{
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+    background: var(--bg-tile); border: 1px solid var(--border-soft); border-radius: 4px; padding: 10px 14px;
+  }
+  .admin-row-name{ font-size: 0.9rem; }
+  .admin-row-actions{ display: flex; gap: 6px; }
+
+  .loading{ text-align: center; color: var(--ink-faint); padding: 60px 0; font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<div class="wrap" id="app">
+  <div class="loading" id="loading">Memuat data donasi…</div>
+</div>
+
+<!-- ===== Modal: Sumbang ===== -->
+<div class="overlay" id="donate-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('donate-overlay')">✕</button>
+    <h3 id="donate-title">Sumbang</h3>
+    <p class="sub" id="donate-sub"></p>
+    <label>Transfer / QRIS</label>
+    <div style="background:var(--bg-tile);border:1px solid var(--border-soft);border-radius:4px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink-dim);">
+      QRIS &amp; nomor rekening menyusul di sini — admin bisa isi lewat mode edit. Setelah transfer, konfirmasi ke admin ya, nanti progresnya diupdate manual dulu (sistem otomatis nyusul).
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" style="flex:1" onclick="closeModal('donate-overlay')">Mengerti</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: Admin PIN gate ===== -->
+<div class="overlay" id="pin-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('pin-overlay')">✕</button>
+    <h3>Masuk mode admin</h3>
+    <p class="sub">Masukkan PIN untuk mengedit kategori &amp; progres donasi.</p>
+    <label>PIN</label>
+    <input type="password" id="pin-input" inputmode="numeric" placeholder="••••">
+    <div class="msg err" id="pin-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" style="flex:1" onclick="checkPin()">Masuk</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: Admin panel ===== -->
+<div class="overlay" id="admin-overlay">
+  <div class="modal" style="max-width:520px;">
+    <button class="modal-close" onclick="closeModal('admin-overlay')">✕</button>
+    <h3>Mode admin</h3>
+    <p class="sub">Klik kategori buat edit target, harga per unit, atau tambah dana masuk.</p>
+    <div class="admin-panel-list" id="admin-list"></div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost btn-sm" onclick="exitAdmin()">Keluar mode admin</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== Modal: Edit kategori ===== -->
+<div class="overlay" id="edit-overlay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('edit-overlay')">✕</button>
+    <h3>Edit kategori</h3>
+    <label>Nama kategori</label>
+    <input type="text" id="edit-name">
+    <label>Deskripsi singkat</label>
+    <textarea id="edit-desc" rows="2"></textarea>
+    <label>Label satuan (mis. "pohon", "adopsi/bulan")</label>
+    <input type="text" id="edit-unit">
+    <label>Harga per satuan (Rp)</label>
+    <input type="number" id="edit-price" min="0">
+    <label>Target total (Rp)</label>
+    <input type="number" id="edit-target" min="0">
+    <label>Dana terkumpul saat ini (Rp)</label>
+    <input type="number" id="edit-collected" min="0">
+    <div class="msg" id="edit-msg"></div>
+    <div class="modal-actions">
+      <button class="btn btn-primary" style="flex:1" onclick="saveEdit()">Simpan</button>
+      <button class="btn btn-ghost btn-danger btn-sm" onclick="deleteCategory()">Hapus</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const ADMIN_PIN = '2026'; // ganti sesuai kebutuhan tim admin — PIN ini baru dicek di browser, belum aman. Ganti ke Firebase Auth sebelum go-live.
+  let categories = [];
+  let isAdmin = false;
+  let editingId = null;
+
+  // ---------- Firebase ----------
+  const firebaseConfig = {
+    apiKey: "AIzaSyBYc4_uhdgxsCT6euMhq53nm69e8606N6o",
+    authDomain: "donasi-erin.firebaseapp.com",
+    databaseURL: "https://donasi-erin-default-rtdb.asia-southeast1.firebasedatabase.app",
+    projectId: "donasi-erin",
+    storageBucket: "donasi-erin.firebasestorage.app",
+    messagingSenderId: "663744350082",
+    appId: "1:663744350082:web:41c7c64186c3fa95e6f19b",
+    measurementId: "G-QX4D9187RZ"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const categoriesRef = firebase.database().ref('categories');
+
+  const DEFAULT_CATEGORIES = [
+    { id: 'pohon', name: 'Pohon', unit: 'pohon', desc: 'Penanaman pohon di lahan kritis.', price: 50000, target: 2500000, collected: 0 },
+    { id: 'mangrove', name: 'Mangrove', unit: 'bibit mangrove', desc: 'Restorasi pesisir lewat penanaman mangrove.', price: 75000, target: 3000000, collected: 0 },
+    { id: 'coral', name: 'Terumbu Karang', unit: 'terumbu karang', desc: 'Transplantasi terumbu karang di area rusak.', price: 150000, target: 4500000, collected: 0 },
+    { id: 'orangutan', name: 'Orang Utan', unit: 'adopsi/bulan', desc: 'Adopsi simbolis perawatan orang utan selama sebulan.', price: 250000, target: 5000000, collected: 0 },
+  ];
+
+  const ICONS = {
+    pohon: '<svg viewBox="0 0 24 24"><path d="M12 3l5 7h-3l4 6h-5v5h-2v-5H6l4-6H7z"/></svg>',
+    mangrove: '<svg viewBox="0 0 24 24"><path d="M12 21V9M12 9c0-3-2-5-5-5M12 9c0-3 2-5 5-5M8 14c-2 0-3-1.5-3-3M16 14c2 0 3-1.5 3-3"/></svg>',
+    coral: '<svg viewBox="0 0 24 24"><path d="M12 21v-6M12 15c-3 0-4-3-3-6M12 15c3 0 4-3 3-6M9 9c-1-2 0-4 1-5M15 9c1-2 0-4-1-5"/></svg>',
+    orangutan: '<svg viewBox="0 0 24 24"><circle cx="12" cy="10" r="5"/><path d="M7 10c-2-1-3 1-2 3M17 10c2-1 3 1 2 3M9 20c0-3 1-5 3-5s3 2 3 5"/></svg>',
+  };
+
+  function rupiah(n){
+    return 'Rp' + Math.round(n).toLocaleString('id-ID');
+  }
+
+  function loadData(){
+    // Dengerin perubahan realtime — begitu ada yang nulis (misal admin edit,
+    // atau nanti webhook pembayaran update angka), semua yang buka web ini
+    // otomatis ke-refresh tanpa perlu reload.
+    categoriesRef.on('value', (snapshot) => {
+      const val = snapshot.val();
+      if (val){
+        categories = Object.keys(val).map(id => ({ id, ...val[id] }));
+      } else {
+        // Database masih kosong (pertama kali setup) — seed dengan default.
+        categories = DEFAULT_CATEGORIES;
+        saveData();
+      }
+      render();
+    }, (err) => {
+      document.getElementById('app').innerHTML =
+        `<div class="loading">Gagal konek ke database: ${err.message}. Cek security rules di Firebase console.</div>`;
+    });
+  }
+
+  async function saveData(){
+    const obj = {};
+    categories.forEach(c => {
+      const { id, ...rest } = c;
+      obj[id] = rest;
+    });
+    try{
+      await categoriesRef.set(obj);
+    }catch(e){
+      console.error('Gagal menyimpan ke Firebase', e);
+      alert('Gagal menyimpan: ' + e.message);
+    }
+  }
+
+  function render(){
+    const totalCollected = categories.reduce((s,c) => s + c.collected, 0);
+    const totalTarget = categories.reduce((s,c) => s + c.target, 0);
+
+    const cardsHtml = categories.map(c => {
+      const pct = c.target > 0 ? Math.min(100, (c.collected / c.target) * 100) : 0;
+      const unitsDone = c.price > 0 ? Math.floor(c.collected / c.price) : 0;
+      const remainder = c.price > 0 ? c.price - (c.collected % c.price) : 0;
+      const nextNote = (c.price > 0 && (c.collected % c.price) > 0)
+        ? `Kurang ${rupiah(remainder)} lagi untuk genapin 1 ${c.unit} berikutnya`
+        : '';
+      return `
+        <div class="card">
+          <div class="card-head">
+            <div class="card-icon">${ICONS[c.id] || ICONS.pohon}</div>
+            <div>
+              <div class="card-name">${c.name}</div>
+              <div class="card-desc">${c.desc}</div>
+            </div>
+          </div>
+          <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
+          <div class="amounts">
+            <span class="collected">${rupiah(c.collected)}</span>
+            <span class="target">dari ${rupiah(c.target)}</span>
+          </div>
+          <div class="unit-line">
+            ≈ ${unitsDone} ${c.unit} · Rp${c.price.toLocaleString('id-ID')} / ${c.unit}
+            ${nextNote ? `<span class="next-note">${nextNote}</span>` : ''}
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="openDonate('${c.id}')">Sumbang</button>
+        </div>`;
+    }).join('');
+
+    document.getElementById('app').innerHTML = `
+      <div class="hero">
+        <h1 class="hero-title">Untuk Erin Larasati Angdika</h1>
+        <p class="hero-sub">Bagi kami, Erin adalah pribadi luar biasa yang selalu menginspirasi untuk terus berbagi. Di hari ulang tahunnya kali ini, kami ingin mendedikasikan sebuah gerakan kecil untuk merawat empat ekosistem atas nama Erin. Setiap kontribusi, sekecil apa pun, akan dikonversi ke satuan aksi nyata di bawah ini.</p>
+        <div class="plaque">
+          <p><strong>Cara kerjanya:</strong> pilih kategori yang paling kamu suka, sumbang berapapun, dan lihat progresnya bergerak. Kalau mau "menggenapi" satu unit penuh (misal satu pohon utuh), tiap kategori menunjukkan sisa nominal yang dibutuhkan.</p>
+        </div>
+        <div class="overall">
+          <span class="big">${rupiah(totalCollected)}</span>
+          <span class="of">terkumpul dari ${rupiah(totalTarget)} target keseluruhan</span>
+        </div>
+      </div>
+      <div class="grid">${cardsHtml}</div>
+      <div class="footer">
+        <p>Data diperbarui manual oleh admin setelah donasi dikonfirmasi.</p>
+        <button class="admin-link" onclick="openModal('pin-overlay')">Masuk sebagai admin</button>
+      </div>
+    `;
+  }
+
+  function openModal(id){ document.getElementById(id).classList.add('show'); }
+  function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+  function openDonate(id){
+    const c = categories.find(x => x.id === id);
+    document.getElementById('donate-title').textContent = `Sumbang untuk ${c.name}`;
+    document.getElementById('donate-sub').textContent = `${rupiah(c.price)} = 1 ${c.unit}. Sumbang berapapun tetap dihitung.`;
+    openModal('donate-overlay');
+  }
+
+  function checkPin(){
+    const val = document.getElementById('pin-input').value;
+    const msg = document.getElementById('pin-msg');
+    if (val === ADMIN_PIN){
+      isAdmin = true;
+      document.getElementById('pin-input').value = '';
+      msg.textContent = '';
+      closeModal('pin-overlay');
+      openAdminPanel();
+    } else {
+      msg.textContent = 'PIN salah, coba lagi.';
+    }
+  }
+
+  function exitAdmin(){
+    isAdmin = false;
+    closeModal('admin-overlay');
+  }
+
+  function openAdminPanel(){
+    const list = document.getElementById('admin-list');
+    list.innerHTML = categories.map(c => `
+      <div class="admin-row">
+        <div>
+          <div class="admin-row-name">${c.name}</div>
+        </div>
+        <div class="admin-row-actions">
+          <button class="btn btn-ghost btn-sm" onclick="openEdit('${c.id}')">Edit</button>
+        </div>
+      </div>
+    `).join('') + `
+      <button class="btn btn-ghost btn-sm" onclick="addCategory()">+ Tambah kategori baru</button>
+    `;
+    openModal('admin-overlay');
+  }
+
+  function openEdit(id){
+    editingId = id;
+    const c = categories.find(x => x.id === id);
+    document.getElementById('edit-name').value = c.name;
+    document.getElementById('edit-desc').value = c.desc;
+    document.getElementById('edit-unit').value = c.unit;
+    document.getElementById('edit-price').value = c.price;
+    document.getElementById('edit-target').value = c.target;
+    document.getElementById('edit-collected').value = c.collected;
+    document.getElementById('edit-msg').textContent = '';
+    closeModal('admin-overlay');
+    openModal('edit-overlay');
+  }
+
+  function addCategory(){
+    const id = 'kategori-' + Date.now();
+    categories.push({ id, name: 'Kategori baru', unit: 'unit', desc: '', price: 50000, target: 1000000, collected: 0 });
+    saveData();
+    openAdminPanel();
+  }
+
+  async function saveEdit(){
+    const c = categories.find(x => x.id === editingId);
+    if (!c) return;
+    c.name = document.getElementById('edit-name').value.trim() || c.name;
+    c.desc = document.getElementById('edit-desc').value.trim();
+    c.unit = document.getElementById('edit-unit').value.trim() || c.unit;
+    c.price = Number(document.getElementById('edit-price').value) || 0;
+    c.target = Number(document.getElementById('edit-target').value) || 0;
+    c.collected = Number(document.getElementById('edit-collected').value) || 0;
+    await saveData();
+    document.getElementById('edit-msg').className = 'msg ok';
+    document.getElementById('edit-msg').textContent = 'Tersimpan.';
+    render();
+    setTimeout(() => closeModal('edit-overlay'), 500);
+  }
+
+  async function deleteCategory(){
+    categories = categories.filter(x => x.id !== editingId);
+    await saveData();
+    render();
+    closeModal('edit-overlay');
+  }
+
+  loadData();
+</script>
+
+</body>
+</html>
