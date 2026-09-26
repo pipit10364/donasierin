@@ -107,6 +107,7 @@
   .card-icon svg{ width: 22px; height: 22px; stroke: var(--teal); fill: none; stroke-width: 1.6; }
   .card-name{ font-size: 1.35rem; color: var(--ink); }
   .card-desc{ color: var(--ink-dim); font-size: 0.86rem; margin-top: 3px; line-height: 1.55; }
+  .card-partner{ color: var(--gold); font-size: 0.76rem; margin-top: 6px; letter-spacing: 0.02em; }
 
   .bar-track{
     height: 8px; border-radius: 20px; background: var(--bg-tile);
@@ -290,6 +291,10 @@
     <textarea id="edit-desc" rows="2"></textarea>
     <label>Label satuan (mis. "pohon", "adopsi/bulan")</label>
     <input type="text" id="edit-unit">
+    <label>Bekerja sama dengan (nama yayasan/organisasi, opsional)</label>
+    <input type="text" id="edit-partner" placeholder="mis. Yayasan Konservasi ABC">
+    <label>URL logo/ikon kustom (opsional — kosongkan buat pakai ikon bawaan)</label>
+    <input type="text" id="edit-iconurl" placeholder="https://...">
     <label>Harga per satuan (Rp)</label>
     <input type="number" id="edit-price" min="0">
     <label>Target total (Rp)</label>
@@ -337,10 +342,10 @@
   });
 
   const DEFAULT_CATEGORIES = [
-    { id: 'pohon', name: 'Pohon', unit: 'pohon', desc: 'Penanaman pohon di lahan kritis.', price: 50000, target: 2500000, collected: 0 },
-    { id: 'mangrove', name: 'Mangrove', unit: 'bibit mangrove', desc: 'Restorasi pesisir lewat penanaman mangrove.', price: 75000, target: 3000000, collected: 0 },
-    { id: 'coral', name: 'Terumbu Karang', unit: 'terumbu karang', desc: 'Transplantasi terumbu karang di area rusak.', price: 150000, target: 4500000, collected: 0 },
-    { id: 'orangutan', name: 'Orang Utan', unit: 'adopsi/bulan', desc: 'Adopsi simbolis perawatan orang utan selama sebulan.', price: 250000, target: 5000000, collected: 0 },
+    { id: 'pohon', name: 'Pohon', unit: 'pohon', desc: 'Penanaman pohon di lahan kritis.', price: 50000, target: 2500000, collected: 0, partner: '', iconUrl: '' },
+    { id: 'mangrove', name: 'Mangrove', unit: 'bibit mangrove', desc: 'Restorasi pesisir lewat penanaman mangrove.', price: 75000, target: 3000000, collected: 0, partner: '', iconUrl: '' },
+    { id: 'coral', name: 'Terumbu Karang', unit: 'terumbu karang', desc: 'Transplantasi terumbu karang di area rusak.', price: 150000, target: 4500000, collected: 0, partner: '', iconUrl: '' },
+    { id: 'orangutan', name: 'Orang Utan', unit: 'adopsi/bulan', desc: 'Adopsi simbolis perawatan orang utan selama sebulan.', price: 250000, target: 5000000, collected: 0, partner: '', iconUrl: '' },
   ];
 
   const ICONS = {
@@ -402,10 +407,11 @@
       return `
         <div class="card">
           <div class="card-head">
-            <div class="card-icon">${ICONS[c.id] || ICONS.pohon}</div>
+            <div class="card-icon">${c.iconUrl ? `<img src="${c.iconUrl}" alt="${c.name}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;">` : (ICONS[c.id] || ICONS.pohon)}</div>
             <div>
               <div class="card-name">${c.name}</div>
               <div class="card-desc">${c.desc}</div>
+              ${c.partner ? `<div class="card-partner">Bekerja sama dengan ${c.partner}</div>` : ''}
             </div>
           </div>
           <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
@@ -601,6 +607,8 @@
     document.getElementById('edit-name').value = c.name;
     document.getElementById('edit-desc').value = c.desc;
     document.getElementById('edit-unit').value = c.unit;
+    document.getElementById('edit-partner').value = c.partner || '';
+    document.getElementById('edit-iconurl').value = c.iconUrl || '';
     document.getElementById('edit-price').value = c.price;
     document.getElementById('edit-target').value = c.target;
     document.getElementById('edit-collected').value = c.collected;
@@ -611,7 +619,7 @@
 
   function addCategory(){
     const id = 'kategori-' + Date.now();
-    categories.push({ id, name: 'Kategori baru', unit: 'unit', desc: '', price: 50000, target: 1000000, collected: 0 });
+    categories.push({ id, name: 'Kategori baru', unit: 'unit', desc: '', price: 50000, target: 1000000, collected: 0, partner: '', iconUrl: '' });
     saveData();
     openAdminPanel();
   }
@@ -622,6 +630,8 @@
     c.name = document.getElementById('edit-name').value.trim() || c.name;
     c.desc = document.getElementById('edit-desc').value.trim();
     c.unit = document.getElementById('edit-unit').value.trim() || c.unit;
+    c.partner = document.getElementById('edit-partner').value.trim();
+    c.iconUrl = document.getElementById('edit-iconurl').value.trim();
     c.price = Number(document.getElementById('edit-price').value) || 0;
     c.target = Number(document.getElementById('edit-target').value) || 0;
     c.collected = Number(document.getElementById('edit-collected').value) || 0;
