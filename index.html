@@ -108,6 +108,8 @@
   .card-name{ font-size: 1.35rem; color: var(--ink); }
   .card-desc{ color: var(--ink-dim); font-size: 0.86rem; margin-top: 3px; line-height: 1.55; }
   .card-partner{ color: var(--gold); font-size: 0.76rem; margin-top: 6px; letter-spacing: 0.02em; }
+  .card-partner a{ color: inherit; text-decoration: underline; text-underline-offset: 2px; }
+  .card-partner a:hover{ color: var(--cyan); }
 
   .bar-track{
     height: 8px; border-radius: 20px; background: var(--bg-tile);
@@ -308,8 +310,12 @@
     <input type="text" id="edit-unit">
     <label>Bekerja sama dengan (nama yayasan/organisasi, opsional)</label>
     <input type="text" id="edit-partner" placeholder="mis. Yayasan Konservasi ABC">
+    <label>Link info tentang yayasan (opsional — bikin nama di atas bisa diklik)</label>
+    <input type="text" id="edit-partnerurl" placeholder="https://...">
     <label>URL logo/ikon kustom (opsional — kosongkan buat pakai ikon bawaan)</label>
     <input type="text" id="edit-iconurl" placeholder="https://...">
+    <label>Link donasi langsung ke yayasan (opsional — kalau diisi, tombol Sumbang langsung buka link ini, bukan form)</label>
+    <input type="text" id="edit-donateurl" placeholder="https://...">
     <label>Harga per satuan (Rp)</label>
     <input type="number" id="edit-price" min="0">
     <label>Target total (Rp)</label>
@@ -357,10 +363,10 @@
   });
 
   const DEFAULT_CATEGORIES = [
-    { id: 'pohon', name: 'Pohon', unit: 'pohon', desc: 'Penanaman pohon di lahan kritis.', price: 50000, target: 2500000, collected: 0, partner: '', iconUrl: '' },
-    { id: 'mangrove', name: 'Mangrove', unit: 'bibit mangrove', desc: 'Restorasi pesisir lewat penanaman mangrove.', price: 75000, target: 3000000, collected: 0, partner: '', iconUrl: '' },
-    { id: 'coral', name: 'Terumbu Karang', unit: 'terumbu karang', desc: 'Transplantasi terumbu karang di area rusak.', price: 150000, target: 4500000, collected: 0, partner: '', iconUrl: '' },
-    { id: 'orangutan', name: 'Orang Utan', unit: 'adopsi/bulan', desc: 'Adopsi simbolis perawatan orang utan selama sebulan.', price: 250000, target: 5000000, collected: 0, partner: '', iconUrl: '' },
+    { id: 'pohon', name: 'Pohon', unit: 'pohon', desc: 'Penanaman pohon di lahan kritis.', price: 50000, target: 2500000, collected: 0, partner: '', partnerUrl: '', iconUrl: '', donateUrl: '' },
+    { id: 'mangrove', name: 'Mangrove', unit: 'bibit mangrove', desc: 'Restorasi pesisir lewat penanaman mangrove.', price: 75000, target: 3000000, collected: 0, partner: '', partnerUrl: '', iconUrl: '', donateUrl: '' },
+    { id: 'coral', name: 'Terumbu Karang', unit: 'terumbu karang', desc: 'Transplantasi terumbu karang di area rusak.', price: 150000, target: 4500000, collected: 0, partner: '', partnerUrl: '', iconUrl: '', donateUrl: '' },
+    { id: 'orangutan', name: 'Orang Utan', unit: 'adopsi/bulan', desc: 'Adopsi simbolis perawatan orang utan selama sebulan.', price: 250000, target: 5000000, collected: 0, partner: '', partnerUrl: '', iconUrl: '', donateUrl: '' },
   ];
 
   const ICONS = {
@@ -419,6 +425,14 @@
       const nextNote = (c.price > 0 && (c.collected % c.price) > 0)
         ? `Kurang ${rupiah(remainder)} lagi untuk genapin 1 ${c.unit} berikutnya`
         : '';
+      const partnerHtml = c.partner
+        ? (c.partnerUrl
+            ? `<div class="card-partner">Bekerja sama dengan <a href="${c.partnerUrl}" target="_blank" rel="noopener">${c.partner}</a></div>`
+            : `<div class="card-partner">Bekerja sama dengan ${c.partner}</div>`)
+        : '';
+      const sumbangBtnHtml = c.donateUrl
+        ? `<a class="btn btn-primary btn-sm" style="text-align:center;text-decoration:none;display:block;" href="${c.donateUrl}" target="_blank" rel="noopener">Sumbang</a>`
+        : `<button class="btn btn-primary btn-sm" onclick="openDonate('${c.id}')">Sumbang</button>`;
       return `
         <div class="card">
           <div class="card-head">
@@ -426,7 +440,7 @@
             <div>
               <div class="card-name">${c.name}</div>
               <div class="card-desc">${c.desc}</div>
-              ${c.partner ? `<div class="card-partner">Bekerja sama dengan ${c.partner}</div>` : ''}
+              ${partnerHtml}
             </div>
           </div>
           <div class="bar-track"><div class="bar-fill" style="width:${pct}%"></div></div>
@@ -438,7 +452,7 @@
             ≈ ${unitsDone} ${c.unit} · Rp${c.price.toLocaleString('id-ID')} / ${c.unit}
             ${nextNote ? `<span class="next-note">${nextNote}</span>` : ''}
           </div>
-          <button class="btn btn-primary btn-sm" onclick="openDonate('${c.id}')">Sumbang</button>
+          ${sumbangBtnHtml}
         </div>`;
     }).join('');
 
@@ -648,7 +662,9 @@
     document.getElementById('edit-desc').value = c.desc;
     document.getElementById('edit-unit').value = c.unit;
     document.getElementById('edit-partner').value = c.partner || '';
+    document.getElementById('edit-partnerurl').value = c.partnerUrl || '';
     document.getElementById('edit-iconurl').value = c.iconUrl || '';
+    document.getElementById('edit-donateurl').value = c.donateUrl || '';
     document.getElementById('edit-price').value = c.price;
     document.getElementById('edit-target').value = c.target;
     document.getElementById('edit-collected').value = c.collected;
@@ -659,7 +675,7 @@
 
   function addCategory(){
     const id = 'kategori-' + Date.now();
-    categories.push({ id, name: 'Kategori baru', unit: 'unit', desc: '', price: 50000, target: 1000000, collected: 0, partner: '', iconUrl: '' });
+    categories.push({ id, name: 'Kategori baru', unit: 'unit', desc: '', price: 50000, target: 1000000, collected: 0, partner: '', partnerUrl: '', iconUrl: '', donateUrl: '' });
     saveData();
     openAdminPanel();
   }
@@ -671,7 +687,9 @@
     c.desc = document.getElementById('edit-desc').value.trim();
     c.unit = document.getElementById('edit-unit').value.trim() || c.unit;
     c.partner = document.getElementById('edit-partner').value.trim();
+    c.partnerUrl = document.getElementById('edit-partnerurl').value.trim();
     c.iconUrl = document.getElementById('edit-iconurl').value.trim();
+    c.donateUrl = document.getElementById('edit-donateurl').value.trim();
     c.price = Number(document.getElementById('edit-price').value) || 0;
     c.target = Number(document.getElementById('edit-target').value) || 0;
     c.collected = Number(document.getElementById('edit-collected').value) || 0;
