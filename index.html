@@ -170,6 +170,7 @@
   .modal{
     background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px;
     padding: 28px; max-width: 420px; width: 100%; position: relative;
+    max-height: 88vh; overflow-y: auto;
   }
   .modal h3{ font-size: 1.4rem; margin-bottom: 6px; }
   .modal .sub{ color: var(--ink-dim); font-size: 0.86rem; margin-bottom: 20px; }
@@ -181,6 +182,15 @@
     font-size: 0.92rem;
   }
   .modal input:focus, .modal textarea:focus{ outline: none; border-color: var(--teal); }
+  .password-field{ position: relative; }
+  .password-field input{ padding-right: 42px; }
+  .toggle-password{
+    position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--ink-faint); cursor: pointer;
+    padding: 6px; display: flex; align-items: center; justify-content: center;
+  }
+  .toggle-password:hover{ color: var(--teal); }
+  .toggle-password svg{ width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.6; }
   .modal-actions{ display: flex; gap: 10px; margin-top: 22px; }
   .modal-close{
     position: absolute; top: 18px; right: 18px; background: none; border: none;
@@ -244,7 +254,12 @@
     <label>Email</label>
     <input type="email" id="login-email" autocomplete="username">
     <label>Password</label>
-    <input type="password" id="login-password" autocomplete="current-password">
+    <div class="password-field">
+      <input type="password" id="login-password" autocomplete="current-password">
+      <button type="button" class="toggle-password" onclick="togglePasswordVisibility(this)" aria-label="Tampilkan password">
+        <svg id="eye-icon" viewBox="0 0 24 24"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+      </button>
+    </div>
     <div class="msg err" id="pin-msg"></div>
     <div class="modal-actions">
       <button class="btn btn-primary" style="flex:1" onclick="checkPin()">Masuk</button>
@@ -449,6 +464,31 @@
 
   function openModal(id){ document.getElementById(id).classList.add('show'); }
   function closeModal(id){ document.getElementById(id).classList.remove('show'); }
+
+  // Klik area gelap di luar modal juga nutup modal — jaga-jaga kalau
+  // tombol ✕ ikut ke-scroll ke atas pas konten modal panjang.
+  document.querySelectorAll('.overlay').forEach(ov => {
+    ov.addEventListener('click', (e) => {
+      if (e.target === ov) ov.classList.remove('show');
+    });
+  });
+
+  const EYE_OPEN = '<path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/>';
+  const EYE_CLOSED = '<path d="M3 3l18 18M10.6 10.6a3 3 0 004.24 4.24M9.5 5.2A11 11 0 0112 5c7 0 11 7 11 7a13.9 13.9 0 01-3.2 3.9M6.3 6.3A13.6 13.6 0 001 12s4 7 11 7c1.4 0 2.7-.24 3.9-.67"/>';
+
+  function togglePasswordVisibility(btn){
+    const input = document.getElementById('login-password');
+    const svg = btn.querySelector('svg');
+    if (input.type === 'password'){
+      input.type = 'text';
+      svg.innerHTML = EYE_CLOSED;
+      btn.setAttribute('aria-label', 'Sembunyikan password');
+    } else {
+      input.type = 'password';
+      svg.innerHTML = EYE_OPEN;
+      btn.setAttribute('aria-label', 'Tampilkan password');
+    }
+  }
 
   function openDonate(id){
     const c = categories.find(x => x.id === id);
