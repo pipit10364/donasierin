@@ -5,36 +5,37 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Dana Konservasi — untuk Erin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;0,700;1,500&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@500;600;700&family=Manrope:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
 <!-- Firebase (Realtime Database) -->
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-database-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
 <style>
   :root{
-    --bg: #061a15;
-    --bg-panel: #0c2721;
-    --bg-card: #123830;
-    --bg-tile: #0d2a24;
-    --border: #1e4a3f;
-    --border-soft: #17392f;
-    --teal: #2dd4bf;
-    --emerald: #34d399;
-    --cyan: #5eead4;
-    --ink: #eaf6f3;
-    --ink-dim: #83ab9d;
-    --ink-faint: #4c7669;
-    --struck: #e8827a;
-    --gold: #d8b979;
-    --glow: 0 0 40px rgba(45, 212, 191, 0.15);
+    --bg: #f3fbf9;
+    --bg-panel: #ffffff;
+    --bg-card: #ffffff;
+    --bg-tile: #eef9f7;
+    --border: #d3ece7;
+    --border-soft: #e3f4f1;
+    --teal: #0d9488;
+    --emerald: #059669;
+    --cyan: #2dd4bf;
+    --ink: #0f3831;
+    --ink-dim: #557e76;
+    --ink-faint: #93b3ac;
+    --struck: #dc6456;
+    --gold: #c3922e;
+    --glow: 0 0 32px rgba(13, 148, 136, 0.18);
   }
 
   *{ box-sizing:border-box; margin:0; padding:0; }
 
   body{
     background:
-      radial-gradient(circle at 15% 10%, rgba(45,212,191,0.08), transparent 45%),
-      radial-gradient(circle at 85% 90%, rgba(94,234,212,0.08), transparent 45%),
+      radial-gradient(circle, rgba(13,148,136,0.1) 1.4px, transparent 1.4px) 0 0/26px 26px,
+      radial-gradient(circle at 12% 8%, rgba(45,212,191,0.16), transparent 42%),
+      radial-gradient(circle at 88% 92%, rgba(5,150,105,0.12), transparent 42%),
       var(--bg);
     color: var(--ink);
     font-family: 'Manrope', sans-serif;
@@ -44,9 +45,9 @@
   }
 
   h1, h2, h3, .display{
-    font-family: 'Cormorant Garamond', serif;
-    font-weight: 600;
-    letter-spacing: 0.01em;
+    font-family: 'Quicksand', sans-serif;
+    font-weight: 700;
+    letter-spacing: 0;
   }
 
   .wrap{ max-width: 920px; margin: 0 auto; }
@@ -68,14 +69,9 @@
 
   .plaque{
     margin: 32px auto 0; max-width: 640px; text-align: left; background: var(--bg-panel);
-    border: 1px solid var(--border); border-radius: 4px; padding: 26px 26px; position: relative;
+    border: 1px solid var(--border); border-radius: 18px; padding: 26px 26px; position: relative;
+    box-shadow: 0 10px 28px rgba(13,148,136,0.08);
   }
-  .plaque::before, .plaque::after{
-    content: ""; position: absolute; width: 16px; height: 16px;
-    border: 1.5px solid var(--gold); opacity: 0.6;
-  }
-  .plaque::before{ top: 10px; left: 10px; border-right: none; border-bottom: none; }
-  .plaque::after{ bottom: 10px; right: 10px; border-left: none; border-top: none; }
   .plaque p{ color: var(--ink-dim); font-size: 0.96rem; }
   .plaque p + p{ margin-top: 10px; }
   .plaque strong{ color: var(--ink); }
@@ -95,9 +91,12 @@
   @media (max-width: 640px){ .grid{ grid-template-columns: 1fr; } }
 
   .card{
-    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 18px;
     padding: 24px; position: relative; display: flex; flex-direction: column; gap: 14px;
+    box-shadow: 0 10px 28px rgba(13,148,136,0.08);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
+  .card:hover{ transform: translateY(-3px); box-shadow: 0 16px 34px rgba(13,148,136,0.13); }
   .card-head{ display: flex; align-items: flex-start; gap: 14px; }
   .card-icon{
     flex-shrink: 0; width: 44px; height: 44px; border-radius: 50%;
@@ -129,14 +128,14 @@
   .amounts .target{ color: var(--ink-faint); }
 
   .unit-line{
-    font-size: 0.82rem; color: var(--cyan); border-top: 1px solid var(--border-soft);
+    font-size: 0.82rem; color: var(--teal); border-top: 1px solid var(--border-soft);
     padding-top: 12px; line-height: 1.6;
   }
   .unit-line .next-note{ display: block; color: var(--ink-faint); margin-top: 3px; font-size: 0.78rem; }
 
   .btn{
     font-family: 'Manrope', sans-serif; font-weight: 700; font-size: 0.92rem;
-    border: none; border-radius: 3px; padding: 12px 20px; cursor: pointer;
+    border: none; border-radius: 12px; padding: 12px 20px; cursor: pointer;
     transition: transform 0.15s ease, box-shadow 0.15s ease;
   }
   .btn-primary{ background: linear-gradient(120deg, var(--teal), var(--cyan)); color: #04141a; }
@@ -170,9 +169,10 @@
   }
   .overlay.show{ display: flex; }
   .modal{
-    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 6px;
+    background: var(--bg-panel); border: 1px solid var(--border); border-radius: 18px;
     padding: 28px; max-width: 420px; width: 100%; position: relative;
     max-height: 88vh; overflow-y: auto;
+    box-shadow: 0 20px 48px rgba(13,148,136,0.18);
   }
   .modal h3{ font-size: 1.4rem; margin-bottom: 6px; }
   .modal .sub{ color: var(--ink-dim); font-size: 0.86rem; margin-bottom: 20px; }
@@ -180,7 +180,7 @@
   .modal label:first-of-type{ margin-top: 0; }
   .modal input, .modal textarea{
     width: 100%; background: var(--bg-tile); border: 1px solid var(--border-soft);
-    border-radius: 4px; padding: 10px 12px; color: var(--ink); font-family: 'Manrope', sans-serif;
+    border-radius: 10px; padding: 10px 12px; color: var(--ink); font-family: 'Manrope', sans-serif;
     font-size: 0.92rem;
   }
   .modal input:focus, .modal textarea:focus{ outline: none; border-color: var(--teal); }
@@ -206,7 +206,7 @@
   .admin-panel-list{ display: flex; flex-direction: column; gap: 10px; margin-top: 18px; max-height: 50vh; overflow-y: auto; }
   .admin-row{
     display: flex; justify-content: space-between; align-items: center; gap: 10px;
-    background: var(--bg-tile); border: 1px solid var(--border-soft); border-radius: 4px; padding: 10px 14px;
+    background: var(--bg-tile); border: 1px solid var(--border-soft); border-radius: 10px; padding: 10px 14px;
   }
   .admin-row-name{ font-size: 0.9rem; }
   .admin-row-actions{ display: flex; gap: 6px; }
@@ -227,7 +227,7 @@
     <h3 id="donate-title">Sumbang</h3>
     <p class="sub" id="donate-sub"></p>
     <label>Transfer / QRIS</label>
-    <div id="transfer-info-box" style="background:var(--bg-tile);border:1px solid var(--border-soft);border-radius:4px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink-dim);white-space:pre-line;">
+    <div id="transfer-info-box" style="background:var(--bg-tile);border:1px solid var(--border-soft);border-radius:10px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink-dim);white-space:pre-line;">
       Info rekening/QRIS belum diisi admin.
     </div>
 
