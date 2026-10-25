@@ -704,6 +704,7 @@
         nama,
         sosmed,
         kategori: currentDonateCategory ? currentDonateCategory.name : '',
+        kategoriId: currentDonateCategory ? currentDonateCategory.id : '',
         nominal,
         buktiTf: bukti
       };
@@ -717,7 +718,7 @@
 
       if (data.result === 'success'){
         msg.className = 'msg ok';
-        msg.textContent = 'Terkirim! Terima kasih — admin akan cek & update progresnya.';
+        msg.textContent = 'Terkirim! Terima kasih 🎉 Donasimu sudah masuk ke progres, admin akan memverifikasi buktinya. Kalau ada kendala, kamu dihubungi lewat medsos.';
         setTimeout(() => closeModal('donate-overlay'), 1800);
       } else {
         throw new Error('Respons tidak sesuai');
