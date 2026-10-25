@@ -291,6 +291,10 @@
     <div id="transfer-info-box" style="background:var(--bg-tile);border:1px solid var(--border-soft);border-radius:10px;padding:12px 14px;font-family:'JetBrains Mono',monospace;font-size:0.85rem;color:var(--ink-dim);white-space:pre-line;">
       Info rekening/QRIS belum diisi admin.
     </div>
+    <div id="qris-wrap" style="display:none;margin-top:12px;text-align:center;">
+      <img id="qris-img" alt="QRIS" style="width:100%;max-width:260px;border:1px solid var(--border-soft);border-radius:12px;background:#fff;padding:8px;">
+      <div style="margin-top:8px;"><a id="qris-download" download="qris.png" class="admin-link">Simpan gambar QRIS</a></div>
+    </div>
 
     <label>Nama</label>
     <input type="text" id="donate-nama" placeholder="Nama kamu">
@@ -351,6 +355,12 @@
     <h3>Info transfer / QRIS</h3>
     <p class="sub">Teks ini muncul di form Sumbang. Bisa tulis nomor rekening, nama bank, atau catatan soal QRIS.</p>
     <textarea id="transfer-info-input" rows="5" placeholder="BCA 1234567890 a.n. ..."></textarea>
+    <label>Gambar QRIS (opsional)</label>
+    <input type="file" id="qris-file" accept="image/*" onchange="onQrisPicked(this)">
+    <div id="qris-preview-wrap" style="display:none;margin-top:10px;text-align:center;">
+      <img id="qris-preview" alt="Preview QRIS" style="width:100%;max-width:200px;border:1px solid var(--border-soft);border-radius:10px;">
+      <div><button type="button" class="admin-link" onclick="removeQris()">Hapus gambar QRIS</button></div>
+    </div>
     <div class="msg" id="transfer-info-msg"></div>
     <div class="modal-actions">
       <button class="btn btn-primary" style="flex:1" onclick="saveTransferInfo()">Simpan</button>
@@ -416,6 +426,22 @@
 
   let currentDonateCategory = null;
   let transferInfoText = '';
+  let qrisData = '';
+  let pendingQris;   // undefined = nggak berubah, '' = dihapus, string = gambar baru
+  const qrisRef = firebase.database().ref('settings/qris');
+
+  function applyQris(){
+    const wrap = document.getElementById('qris-wrap');
+    if (!wrap) return;
+    if (qrisData){
+      document.getElementById('qris-img').src = qrisData;
+      document.getElementById('qris-download').href = qrisData;
+      wrap.style.display = 'block';
+    } else {
+      wrap.style.display = 'none';
+    }
+  }
+  qrisRef.on('value', (snap) => { qrisData = snap.val() || ''; applyQris(); });
 
   transferInfoRef.on('value', (snapshot) => {
     transferInfoText = snapshot.val() || '';
@@ -600,6 +626,7 @@
     document.getElementById('donate-title').textContent = `Sumbang untuk ${c.name}`;
     document.getElementById('donate-sub').textContent = `${rupiah(c.price)} = 1 ${c.unit}. Sumbang berapapun tetap dihitung.`;
     document.getElementById('transfer-info-box').textContent = transferInfoText || 'Info rekening/QRIS belum diisi admin.';
+    applyQris();
     document.getElementById('donate-nama').value = '';
     document.getElementById('donate-sosmed').value = '';
     document.getElementById('donate-nominal').value = '';
@@ -704,9 +731,44 @@
     }
   }
 
+  function showQrisPreview(src){
+    document.getElementById('qris-preview-wrap').style.display = src ? 'block' : 'none';
+    if (src) document.getElementById('qris-preview').src = src;
+  }
+
+  // QRIS dikecilkan (maks 700px) tapi tetap PNG supaya kotak-kotaknya tajam dan bisa discan.
+  function onQrisPicked(input){
+    const file = input.files[0];
+    if (!file) return;
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, 700 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas');
+      c.width = Math.round(img.width * scale); c.height = Math.round(img.height * scale);
+      const ctx = c.getContext('2d');
+      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, c.width, c.height);
+      ctx.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      pendingQris = c.toDataURL('image/png');
+      showQrisPreview(pendingQris);
+    };
+    img.onerror = () => { document.getElementById('transfer-info-msg').className = 'msg err'; document.getElementById('transfer-info-msg').textContent = 'Gambar tidak bisa dibaca.'; };
+    img.src = url;
+  }
+
+  function removeQris(){
+    pendingQris = '';
+    document.getElementById('qris-file').value = '';
+    showQrisPreview('');
+  }
+
   function openTransferInfoEdit(){
     document.getElementById('transfer-info-input').value = transferInfoText;
     document.getElementById('transfer-info-msg').textContent = '';
+    pendingQris = undefined;
+    document.getElementById('qris-file').value = '';
+    showQrisPreview(qrisData);
     closeModal('admin-overlay');
     openModal('transfer-overlay');
   }
@@ -716,6 +778,10 @@
     const msg = document.getElementById('transfer-info-msg');
     try{
       await transferInfoRef.set(val);
+      if (pendingQris !== undefined){
+        if (pendingQris === '') await qrisRef.remove(); else await qrisRef.set(pendingQris);
+        pendingQris = undefined;
+      }
       msg.className = 'msg ok';
       msg.textContent = 'Tersimpan.';
       setTimeout(() => closeModal('transfer-overlay'), 700);
